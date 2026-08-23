@@ -127,13 +127,13 @@ IDamageable 인터페이스와 Health 컴포넌트로 나누는 게 좋을까?
 ```
 1. IDamageable 에 들어갈 메서드는?           (예: TakeDamage(int amount))
 2. 죽었을 때 누가 처리하나?                   Health 인가, 각 객체(EnemyAI)인가
-3. 체력이 변할 때 UI는 어떻게 아나?            event 인가, 폴링인가
+3. 체력이 변할 때 UI는 어떻게 아나?            이벤트 인가, 폴링인가
 4. 무적 시간(피격 직후 잠깐 무적)은 넣나?      넣는다면 어디에
 ```
 
 3번은 이미 `CLAUDE.md` 에 답이 있습니다. 열어서 확인하세요.
 
-> **UI는 폴링하지 말고 C# event 구독으로 갱신할 것**
+> **UI는 폴링하지 말고 C# 이벤트 구독으로 갱신할 것**
 
 이렇게 **규약이 설계 결정을 미리 해두는 것**이 `CLAUDE.md` 를 쓰는 이유입니다.
 
@@ -159,10 +159,10 @@ IDamageable 인터페이스와 Health 컴포넌트로 나누는 게 좋을까?
   - 최대 체력은 인스펙터에서 조절, 기본 100
   - 현재 체력은 밖에서 프로퍼티로 읽기만 가능하되,
     플레이 중 인스펙터에서 값이 보이게 할 것 — 눈으로 검증해야 한다
-  - 체력이 변하면 event로 (현재, 최대) 를 알릴 것
-  - 0 이하가 되면 사망 event를 한 번만 발생시킬 것 (여러 번 맞아도 한 번)
+  - 체력이 변하면 이벤트로 (현재, 최대) 를 알릴 것
+  - 0 이하가 되면 사망 이벤트를 한 번만 발생시킬 것 (여러 번 맞아도 한 번)
   - 죽은 뒤에는 더 이상 데미지를 받지 않을 것
-- 사망 시 오브젝트를 파괴하는 것은 Health가 하지 않는다. event를 받는 쪽이 정한다
+- 사망 시 오브젝트를 파괴하는 것은 Health가 하지 않는다. 이벤트를 받는 쪽이 정한다
 
 파일 2개만: Assets/Scripts/Core/IDamageable.cs, Assets/Scripts/Core/Health.cs
 씬은 건드리지 마.
@@ -178,7 +178,7 @@ IDamageable 인터페이스와 Health 컴포넌트로 나누는 게 좋을까?
 ## 코드 읽기
 
 ```
-방금 만든 Health.cs에서 사망 event가 한 번만 발생하도록 만든 부분을 설명해줘.
+방금 만든 Health.cs에서 사망 이벤트가 한 번만 발생하도록 만든 부분을 설명해줘.
 그 처리가 없으면 어떤 일이 생기는지도.
 ```
 
@@ -278,8 +278,8 @@ NavMeshAgent 기반 근접 적을 만들어줘.
 - 공격할 때마다 콘솔에 로그를 남길 것.
   지금은 플레이어에게 Health가 없어서 공격이 일어나는지 로그로만 확인할 수 있다
 - 체력은 앞서 만든 Health 컴포넌트를 쓴다. EnemyAI가 체력을 따로 갖지 마
-- Health의 사망 event를 구독해서 Dead 상태로 가고, 1초 뒤 오브젝트 파괴
-- 구독한 event는 OnDisable에서 반드시 해제할 것
+- Health의 사망 이벤트를 구독해서 Dead 상태로 가고, 1초 뒤 오브젝트 파괴
+- 구독한 이벤트는 OnDisable에서 반드시 구독 해제할 것
 - 플레이어는 태그가 아니라 [SerializeField] Transform 참조로 받을 것
   (씬에 하나뿐이지만, 매 프레임 Find 하지 않기 위해)
 - 단, 이 적은 프리팹으로 만들어 웨이브가 스폰할 것이다.
@@ -402,7 +402,7 @@ Play 를 누르고 확인합니다.
 | 적이 제자리에 서 있다                                      | NavMesh 베이크 여부(0-3). 적이 파란 영역 위에 있는지                                                                                                                          |
 | `"SetDestination" can only be called on an active agent` | 적이 NavMesh 밖에 있습니다. Y 좌표와 위치를 확인                                                                                                                              |
 | 적이 몸을 밀고 들어온다                                    | `Stopping Distance` 확인                                                                                                                                                    |
-| 죽었는데 계속 따라온다                                     | 사망 event 구독이 안 됐거나 Dead 상태에서 이동을 안 멈춘 것                                                                                                                   |
+| 죽었는데 계속 따라온다                                     | 사망 이벤트 구독이 안 됐거나 Dead 상태에서 이동을 안 멈춘 것                                                                                                                   |
 | 공격 로그가 안 뜬다                                        | **먼저 `EnemyAI.cs` 에 로그 코드가 있는지 확인.** 없으면 AI가 안 넣은 것입니다 — 요청해서 넣으세요. 코드가 있는데 안 뜨면 공격 거리 <`Stopping Distance` 인지 확인 |
 
 원인을 모르겠으면:
@@ -441,8 +441,8 @@ ScriptableObject 기반 웨이브 시스템을 만들어줘.
     Transform 배열을 인스펙터에 노출하지 마
   - 플레이어 Transform을 [SerializeField]로 받아서,
     스폰한 적에게 2-3에서 만든 공개 메서드로 넘겨줄 것
-  - 웨이브 시작 / 웨이브 클리어 / 전체 클리어를 C# event로 노출
-  - 살아 있는 적 수는 스폰할 때 세고, 각 적의 사망 event를 구독해서 줄일 것.
+  - 웨이브 시작 / 웨이브 클리어 / 전체 클리어를 C# 이벤트로 노출
+  - 살아 있는 적 수는 스폰할 때 세고, 각 적의 사망 이벤트를 구독해서 줄일 것.
     매 프레임 FindObjectsOfType 으로 세지 마
 
 파일 2개만: Assets/Scripts/Core/WaveData.cs, Assets/Scripts/Core/WaveSpawner.cs
@@ -554,7 +554,7 @@ git commit -m "feat: ScriptableObject 웨이브 시스템 추가"
 방금 만든 WaveSpawner에 오브젝트 풀링을 적용해줘.
 
 - Instantiate/Destroy 를 풀 재사용으로 바꿀 것
-- WaveSpawner 의 공개 API와 event 시그니처는 그대로 유지
+- WaveSpawner 의 공개 API와 이벤트 시그니처는 그대로 유지
 - 적이 죽으면 파괴하지 말고 비활성화해서 풀로 돌려보낼 것
 - 풀에서 꺼낸 적은 체력과 상태가 초기화되어 있어야 한다
 - 변경 전후 차이를 요약해서 설명해줘
@@ -586,7 +586,7 @@ git diff Assets/Scripts/Core/WaveSpawner.cs
 ```
 
 ```
-□ event 이름과 시그니처가 그대로인가?
+□ 이벤트 이름과 시그니처가 그대로인가?
 □ 요청하지 않은 파일이 바뀌지 않았나?
 ```
 

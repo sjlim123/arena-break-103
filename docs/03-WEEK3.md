@@ -114,13 +114,13 @@ Debug.Log($"발사 — 남은 탄약 {_currentAmmo}/{_magazineSize}");
 
 - 상태: Ready / Playing / GameOver / Cleared — enum + switch로 단순하게
 - Ready에서 시작해 잠깐 뒤 Playing으로 (대기 시간은 인스펙터에서 조절)
-- 플레이어 Health의 사망 event를 구독해서 GameOver로
-- WaveSpawner의 전체 클리어 event를 구독해서 Cleared로
+- 플레이어 Health의 사망 이벤트를 구독해서 GameOver로
+- WaveSpawner의 전체 클리어 이벤트를 구독해서 Cleared로
 - GameOver / Cleared 에서: 커서 표시, Time.timeScale = 0
 - 그 상태에서 R키를 누르면 현재 씬을 다시 로드
   (Time.timeScale을 1로 되돌리는 것을 잊지 말 것)
-- 상태가 바뀌면 C# event로 알릴 것 — HUD가 구독할 것이다
-- 구독한 event는 OnDisable에서 반드시 해제할 것
+- 상태가 바뀌면 C# 이벤트로 알릴 것 — HUD가 구독할 것이다
+- 구독한 이벤트는 OnDisable에서 반드시 구독 해제할 것
 - GameOver / Cleared 로 갈 때 플레이어 조작을 멈출 것.
   timeScale = 0 은 Update를 멈추지 않아서, 안 끄면 죽은 뒤에도 총이 나간다
   PlayerController 와 WeaponSystem 을 각각 [SerializeField] 로 받아 enabled 를 끌 것.
@@ -142,7 +142,7 @@ WaveSpawner와 PlayerController는 수정하지 마.
 | "timeScale을 1로 되돌릴 것"         | 재시작했는데 화면이 멈춰 있습니다. 가장 흔한 버그입니다                            |
 | **"플레이어 조작을 멈출 것"** | 이게 없으면**죽은 뒤에 총알이 한 발 더 나갑니다.** 아래에 이유를 적었습니다  |
 | **"Esc로 종료"**              | 커서가 잠긴 채로는 창의 X 를 누르기 어렵습니다. Esc 로 커서를 풀고 닫습니다. 3-5에서 확인합니다 |
-| "상태가 바뀌면 event로 알릴 것"     | HUD가`Update()`에서 상태를 폴링하게 됩니다                                       |
+| "상태가 바뀌면 이벤트로 알릴 것"     | HUD가`Update()`에서 상태를 폴링하게 됩니다                                       |
 | "WaveSpawner는 수정하지 마"         | 2장에 완성한 것을 건드리지 않게 막습니다                                           |
 
 ### timeScale = 0 의 함정 ★★
@@ -312,9 +312,9 @@ git commit -m "feat: 게임 상태 머신과 재시작 추가"
 
 | 보여줄 것       | 지금 어디에 있나         | 알림 방법이 있나                 |
 | --------------- | ------------------------ | -------------------------------- |
-| 체력            | `Player` 의 `Health` | ✅`HealthChanged` event        |
-| 웨이브 번호     | `WaveSpawner`          | ✅`WaveStarted` event          |
-| 게임 상태       | `GameManager`          | ✅ 3-1에서 만든 event            |
+| 체력            | `Player` 의 `Health` | ✅`HealthChanged` 이벤트        |
+| 웨이브 번호     | `WaveSpawner`          | ✅`WaveStarted` 이벤트          |
+| 게임 상태       | `GameManager`          | ✅ 3-1에서 만든 이벤트            |
 | **탄약**  | `WeaponSystem`         | ❌**`Debug.Log` 뿐이다** |
 | **킬 수** | 아무도 안 센다           | ❌**없다**                 |
 
@@ -323,14 +323,14 @@ git commit -m "feat: 게임 상태 머신과 재시작 추가"
 ## 없는 것 두 개 먼저 (프롬프트)
 
 ```
-HUD가 구독할 수 있도록 두 곳에 event를 추가해줘.
+HUD가 구독할 수 있도록 두 곳에 이벤트를 추가해줘.
 
-- WeaponSystem: 탄약이 변할 때 (현재, 최대) 를 알리는 event.
+- WeaponSystem: 탄약이 변할 때 (현재, 최대) 를 알리는 이벤트.
   기존 Debug.Log는 지울 것 — 이제 화면에 나온다
-- WaveSpawner: 적이 죽을 때마다 누적 킬 수를 알리는 event.
-  이미 각 적의 사망 event를 구독하고 있으니 거기서 세면 된다
+- WaveSpawner: 적이 죽을 때마다 누적 킬 수를 알리는 이벤트.
+  이미 각 적의 사망 이벤트를 구독하고 있으니 거기서 세면 된다
 
-기존 기능과 공개 event 시그니처는 그대로 유지할 것.
+기존 기능과 공개 이벤트 시그니처는 그대로 유지할 것.
 파일 2개만 수정하고 다른 파일은 건드리지 마.
 ```
 
@@ -341,7 +341,7 @@ git diff Assets/Scripts/Player/WeaponSystem.cs Assets/Scripts/Core/WaveSpawner.c
 ```
 
 ```
-□ 기존 event 3개(WaveStarted / WaveCleared / AllWavesCleared)의 이름과 타입이 그대로인가?
+□ 기존 이벤트 3개(WaveStarted / WaveCleared / AllWavesCleared)의 이름과 타입이 그대로인가?
 □ 탄약·재장전·풀링 로직이 그대로인가?
 □ 요청하지 않은 파일이 바뀌지 않았나?
 ```
@@ -357,15 +357,15 @@ HUD를 만들어줘. UI Toolkit 말고 uGUI로.
 - 좌하단: 체력바. 어두운 배경 Image 안에 빨간 Image를 넣고,
   그 빨간 Image의 RectTransform 앵커 폭으로 줄일 것.
   Image.fillAmount는 쓰지 마 — 이유는 아래에 적었다.
-  Health의 HealthChanged event 구독
-- 우하단: 탄약 "현재 / 최대". WeaponSystem의 탄약 event 구독
-- 상단 중앙: 웨이브 번호. WaveSpawner의 WaveStarted event 구독
-- 상단 우측: 킬 수. WaveSpawner의 킬 event 구독
+  Health의 HealthChanged 이벤트 구독
+- 우하단: 탄약 "현재 / 최대". WeaponSystem의 탄약 이벤트 구독
+- 상단 중앙: 웨이브 번호. WaveSpawner의 WaveStarted 이벤트 구독
+- 상단 우측: 킬 수. WaveSpawner의 킬 이벤트 구독
 - 화면 중앙: GameOver / Cleared 안내 문구와 "R키로 재시작".
-  평소에는 숨기고 GameManager의 상태 event로 켤 것
+  평소에는 숨기고 GameManager의 상태 이벤트로 켤 것
 
-- Update()에서 폴링하지 말 것. 전부 event 구독으로
-- 구독은 OnEnable, 해제는 OnDisable
+- Update()에서 폴링하지 말 것. 전부 이벤트 구독으로
+- 구독은 OnEnable, 구독 해제는 OnDisable
 - 참조는 전부 [SerializeField] 로 받을 것. Find 계열 금지
 
 파일: Assets/Scripts/UI/HUDController.cs 하나만 생성.
@@ -575,7 +575,7 @@ git commit -m "feat: 적 피격 플래시 추가"
 다음 관점으로 문제를 찾아 심각도 순으로 정리:
 - Update()에서의 불필요한 연산 / GetComponent 호출
 - null 참조 가능 지점
-- event 구독 후 해제 누락 (메모리 누수)
+- 이벤트 구독 해제 누락 (메모리 누수)
 - 책임이 뒤섞인 클래스
 - CLAUDE.md 규약 위반
 
@@ -603,7 +603,7 @@ git commit -m "feat: 적 피격 플래시 추가"
 | 흔한 잘못된 지적                         | 왜 틀렸나                                                                                  |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------ |
 | "`Update()`에서 `GetComponent` 호출" | `Awake()` 에서 캐싱해 뒀는데 못 본 경우                                                  |
-| "event 해제 누락"                        | `OnDisable` 에 있는데 놓친 경우, 또는 지역 함수로 스스로 해제하는 패턴을 이해 못 한 경우 |
+| "이벤트 구독 해제 누락"                        | `OnDisable` 에 있는데 놓친 경우, 또는 지역 함수로 스스로 구독 해제하는 패턴을 이해 못 한 경우 |
 | "존재하지 않는 줄 번호"                  | 줄 번호가 실제 파일과 어긋난 경우                                                          |
 | "null 체크 필요"                         | `[RequireComponent]` 로 보장되는 참조인 경우                                             |
 

@@ -114,7 +114,7 @@ NavMeshAgent 기반 근접 적을 만들어줘.
 - 공격할 때마다 콘솔에 로그를 남길 것.
   지금은 플레이어에게 Health가 없어서 공격이 일어나는지 로그로만 확인할 수 있다
 - 체력은 앞서 만든 Health 컴포넌트를 쓴다. 체력을 따로 갖지 마
-- Health의 사망 event를 구독하고, OnDisable에서 반드시 해제할 것
+- Health의 사망 이벤트를 구독하고, OnDisable에서 반드시 구독 해제할 것
 - 상태: Idle / Chase / Attack / Dead — enum + switch로 단순하게
 - 플레이어는 [SerializeField] Transform 참조로 받되,
   프리팹은 씬 오브젝트를 참조할 수 없으니
@@ -149,9 +149,9 @@ ScriptableObject 기반 웨이브 시스템을 만들어줘.
   그 자식들을 Awake에서 모아 쓰고 그중 랜덤으로.
   Transform 배열을 인스펙터에 노출하지 마
 - 플레이어 Transform을 받아서, 스폰한 적에게 넘겨줄 것
-- 살아 있는 적 수는 스폰할 때 세고 각 적의 사망 event로 줄일 것.
+- 살아 있는 적 수는 스폰할 때 세고 각 적의 사망 이벤트로 줄일 것.
   매 프레임 FindObjectsOfType으로 세지 마
-- 웨이브 시작 / 클리어 / 전체 클리어를 C# event로 노출
+- 웨이브 시작 / 클리어 / 전체 클리어를 C# 이벤트로 노출
 
 파일 2개만: Core/WaveData.cs, Core/WaveSpawner.cs
 오브젝트 풀링은 아직 넣지 마. 다음 단계에서 할 거야.
@@ -171,12 +171,12 @@ ScriptableObject 기반 웨이브 시스템을 만들어줘.
 ```
 방금 만든 WaveSpawner에 오브젝트 풀링을 적용해줘.
 Instantiate/Destroy를 풀 재사용으로 바꾸되,
-WaveSpawner의 공개 API와 event는 그대로 유지할 것.
+WaveSpawner의 공개 API와 이벤트는 그대로 유지할 것.
 변경 전후 차이를 요약해서 설명해줘.
 ```
 
 **이 카드의 포인트**
-- **"공개 API와 event는 그대로 유지"** → 이것이 리팩터링의 정의다
+- **"공개 API와 이벤트는 그대로 유지"** → 이것이 리팩터링의 정의다
 - "변경 전후 차이를 설명해줘" → 리뷰 없이 넘어가지 않는다
 
 ---
@@ -192,7 +192,7 @@ WaveSpawner의 공개 API와 event는 그대로 유지할 것.
 게임 상태 머신을 만들어줘.
 
 GameManager: Ready → Playing → GameOver → Cleared — enum + switch로 단순하게
-- 플레이어 Health의 사망 event, WaveSpawner의 전체 클리어 event를 구독
+- 플레이어 Health의 사망 이벤트, WaveSpawner의 전체 클리어 이벤트를 구독
 - 정지 시 커서 표시 + Time.timeScale = 0
 - 정지 시 플레이어 조작 컴포넌트를 끌 것.
   timeScale = 0 은 Update를 멈추지 않아서, 안 끄면 죽은 뒤에도 총이 나간다
@@ -201,7 +201,7 @@ GameManager: Ready → Playing → GameOver → Cleared — enum + switch로 단
 - R키로 씬 리로드 (timeScale을 1로 되돌리는 것을 잊지 말 것)
 - Esc로 종료 (Application.Quit)
 - 대기 시간은 코루틴 말고 Time.unscaledTime으로 잴 것
-- 상태가 바뀌면 C# event로 알릴 것
+- 상태가 바뀌면 C# 이벤트로 알릴 것
 
 파일: Core/GameManager.cs
 ```
@@ -215,8 +215,8 @@ HUD를 만들어줘. UI Toolkit 말고 uGUI로.
 - 화면 중앙에 게임오버/클리어 안내. 평소에는 숨길 것
 - 체력바는 Image.fillAmount 말고 RectTransform 앵커 폭으로 줄일 것
   (fillAmount는 Source Image가 있어야 동작한다)
-- 전부 event 구독. Update에서 폴링하지 말 것
-- 구독은 OnEnable, 해제는 OnDisable
+- 전부 이벤트 구독. Update에서 폴링하지 말 것
+- 구독은 OnEnable, 구독 해제는 OnDisable
 - 참조는 전부 [SerializeField]. Find 계열 금지
 
 파일: UI/HUDController.cs
@@ -260,7 +260,7 @@ HUD를 만들어줘. UI Toolkit 말고 uGUI로.
 다음 관점으로 문제를 찾아 심각도 순으로 정리:
 - Update()에서의 불필요한 연산 / GetComponent 호출
 - null 참조 가능 지점
-- event 구독 후 해제 누락 (메모리 누수)
+- 이벤트 구독 해제 누락 (메모리 누수)
 - 책임이 뒤섞인 클래스
 - CLAUDE.md 규약 위반
 
