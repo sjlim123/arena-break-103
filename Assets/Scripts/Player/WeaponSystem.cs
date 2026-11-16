@@ -35,6 +35,9 @@ namespace ArenaBreak.Player
         [SerializeField] private float _markerScale = 0.15f;
         [SerializeField] private float _markerDuration = 0.5f;
 
+        [Header("Hit Effect")]
+        [SerializeField] private ParticleSystem _hitEffectPrefab;
+
         private InputAction _attackAction;
         private InputAction _reloadAction;
         private GameObject _markerTemplate;
@@ -45,6 +48,7 @@ namespace ArenaBreak.Player
         private float _reloadEndTime;
 
         public event Action<int, int> OnAmmoChanged;
+        public event Action<bool> OnReloadingChanged;
 
         private void Awake()
         {
@@ -60,6 +64,12 @@ namespace ArenaBreak.Player
             // 에셋에 Reload 액션이 없어서 코드로 만든다
             _reloadAction = new InputAction(ReloadActionName, InputActionType.Button, ReloadBinding);
             _markerTemplate = CreateMarkerTemplate();
+
+            // 빠져 있어도 사격은 되지만 명중 파티클이 안 보여서 원인을 찾기 어렵다
+            if (_hitEffectPrefab == null)
+            {
+                Debug.LogWarning("WeaponSystem: 명중 파티클 프리팹이 비어 있다. 인스펙터에서 지정할 것.", this);
+            }
         }
 
         private void Start()
@@ -91,7 +101,13 @@ namespace ArenaBreak.Player
             _reloadAction.Disable();
 
             // 재장전 도중에 꺼졌다가 켜지면 타이머가 이미 지나 있어서 즉시 완료돼 버린다
-            _isReloading = false;
+            if (_isReloading)
+            {
+                _isReloading = false;
+
+                // 게임이 끝나 꺼질 때 HUD의 재장전 문구가 켜진 채로 남지 않게 한다
+                OnReloadingChanged?.Invoke(false);
+            }
         }
 
         private void OnDestroy()
@@ -184,6 +200,7 @@ namespace ArenaBreak.Player
             if (Physics.Raycast(ray, out RaycastHit hit, _range))
             {
                 ShowHitMarker(hit.point);
+                SpawnHitEffect(hit.point, hit.normal);
                 ApplyDamage(hit.collider);
             }
 
@@ -202,6 +219,18 @@ namespace ArenaBreak.Player
             damageable.TakeDamage(_damage);
         }
 
+        private void SpawnHitEffect(Vector3 point, Vector3 normal)
+        {
+            if (_hitEffectPrefab == null)
+            {
+                return;
+            }
+
+            // 풀링 대상: 사격할 때마다 생성된다. 파티클이 끝나면 스스로 사라진다(Stop Action = Destroy)
+            // 맞은 면의 바깥쪽을 향하게 해서 불꽃이 면 밖으로 튄다
+            Instantiate(_hitEffectPrefab, point, Quaternion.LookRotation(normal));
+        }
+
         private void ShowHitMarker(Vector3 point)
         {
             // 풀링 대상: 연사하는 동안 구체가 계속 생성/파괴된다
@@ -214,6 +243,8 @@ namespace ArenaBreak.Player
         {
             _isReloading = true;
             _reloadEndTime = Time.time + _reloadDuration;
+
+            OnReloadingChanged?.Invoke(true);
         }
 
         private void FinishReload()
@@ -222,6 +253,7 @@ namespace ArenaBreak.Player
             _currentAmmo = _maxAmmo;
 
             OnAmmoChanged?.Invoke(_currentAmmo, _maxAmmo);
+            OnReloadingChanged?.Invoke(false);
         }
     }
 }

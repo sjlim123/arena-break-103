@@ -22,6 +22,7 @@ namespace ArenaBreak.UI
 
         [Header("Texts")]
         [SerializeField] private Text _ammoText;
+        [SerializeField] private Text _reloadText;
         [SerializeField] private Text _waveText;
         [SerializeField] private Text _killText;
 
@@ -42,6 +43,7 @@ namespace ArenaBreak.UI
         {
             _playerHealth.OnHealthChanged += HandleHealthChanged;
             _weaponSystem.OnAmmoChanged += HandleAmmoChanged;
+            _weaponSystem.OnReloadingChanged += HandleReloadingChanged;
             _waveSpawner.OnWaveStarted += HandleWaveStarted;
             _waveSpawner.OnKillCountChanged += HandleKillCountChanged;
             _gameManager.OnStateChanged += HandleStateChanged;
@@ -49,6 +51,7 @@ namespace ArenaBreak.UI
             // 아직 이벤트가 오지 않은 값의 초기 표시. 체력은 가득 찬 채로 시작하고, 탄약과 웨이브는 시작할 때 이벤트가 온다
             SetHealthRatio(1f);
             HandleKillCountChanged(0);
+            _reloadText.enabled = false;
             _resultPanel.SetActive(false);
         }
 
@@ -62,6 +65,7 @@ namespace ArenaBreak.UI
             if (_weaponSystem != null)
             {
                 _weaponSystem.OnAmmoChanged -= HandleAmmoChanged;
+                _weaponSystem.OnReloadingChanged -= HandleReloadingChanged;
             }
 
             if (_waveSpawner != null)
@@ -86,6 +90,7 @@ namespace ArenaBreak.UI
             isValid &= !IsMissing(_gameManager, "GameManager");
             isValid &= !IsMissing(_healthFill, "체력바 Fill");
             isValid &= !IsMissing(_ammoText, "탄약 텍스트");
+            isValid &= !IsMissing(_reloadText, "재장전 텍스트");
             isValid &= !IsMissing(_waveText, "웨이브 텍스트");
             isValid &= !IsMissing(_killText, "킬 텍스트");
             isValid &= !IsMissing(_resultPanel, "결과 패널");
@@ -122,6 +127,17 @@ namespace ArenaBreak.UI
         private void HandleAmmoChanged(int current, int max)
         {
             _ammoText.text = $"{current} / {max}";
+        }
+
+        private void HandleReloadingChanged(bool isReloading)
+        {
+            // 씬이 정리되는 중에 호출되면 텍스트가 이미 사라졌을 수 있다
+            if (_reloadText == null)
+            {
+                return;
+            }
+
+            _reloadText.enabled = isReloading;
         }
 
         private void HandleWaveStarted(int waveNumber, int totalWaves)
