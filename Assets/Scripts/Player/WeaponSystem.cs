@@ -1,3 +1,4 @@
+using ArenaBreak.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -22,6 +23,7 @@ namespace ArenaBreak.Player
         [Header("Fire")]
         [SerializeField] private float _fireInterval = 0.15f;
         [SerializeField] private float _range = 50f;
+        [Min(0)] [SerializeField] private int _damage = 10;
 
         [Header("Ammo")]
         [SerializeField] private int _maxAmmo = 12;
@@ -173,10 +175,23 @@ namespace ArenaBreak.Player
             if (Physics.Raycast(ray, out RaycastHit hit, _range))
             {
                 ShowHitMarker(hit.point);
+                ApplyDamage(hit.collider);
             }
 
             // 3장에서 HUD로 옮길 임시 출력. 문자열 연결을 피하려고 LogFormat을 쓴다
             Debug.LogFormat("[WeaponSystem] 발사 - 남은 탄약 {0}/{1}", _currentAmmo, _maxAmmo);
+        }
+
+        private void ApplyDamage(Collider target)
+        {
+            // 콜라이더가 자식에 붙은 대상도 맞도록 부모까지 찾는다. 벽과 바닥은 없어서 구체만 남기고 넘어간다
+            IDamageable damageable = target.GetComponentInParent<IDamageable>();
+            if (damageable == null)
+            {
+                return;
+            }
+
+            damageable.TakeDamage(_damage);
         }
 
         private void ShowHitMarker(Vector3 point)
