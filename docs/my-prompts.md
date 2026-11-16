@@ -256,6 +256,7 @@ WeaponSystem.cs만 수정하고 다른 파일은 건드리지 마.
 ````
 
 ### 2-3. 적 AI
+
 ```
 NavMeshAgent 기반 근접 적을 만들어줘.
 
@@ -280,10 +281,54 @@ NavMeshAgent 기반 근접 적을 만들어줘.
 씬과 프리팹은 건드리지 말고 세팅 절차만 알려줘.
 ```
 
+적 프리팹을 만들어줘. MCP 도구로 직접 해줘.
+
+- Capsule 로 만들고 이름은 Enemy
+- Position (0, 1, 0), Scale 은 기본값
+- NavMeshAgent 추가 — Speed 3.5, Stopping Distance 1.8
+- ArenaBreak.Core.Health 추가 — 최대 체력 30
+- ArenaBreak.Enemy.EnemyAI 추가
+- Assets/Materials 에 주황색 URP Lit 머티리얼을 만들어 적용
+  (표적은 빨강이므로 구분되어야 한다)
+- Assets/Prefabs/Enemy.prefab 으로 저장
+
+끝나면 프리팹의 컴포넌트를 다시 읽어서 각 값이 실제로 들어갔는지 보여줘.
+```
+
+**결과**: 구현 성공 + 거리 계산,플레이어의 IDamageable,참조가 비면,첫 공격 문제 없음. 요청한데로 프리팹 절차 설명까지 문제 없었음.
+**문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
+**배운 점**: 여러 단계를 거쳐가면서 만들어나감으로써 요청사항의 정확도 향상이 눈에 보임.
+```
+
 
 ````
 ### 2-4. 웨이브 시스템
+```
+ScriptableObject 기반 웨이브 시스템을 만들어줘.
 
+- WaveData (ScriptableObject): 적 프리팹, 스폰 수, 스폰 간격
+  CreateAssetMenu 를 붙여서 에디터에서 만들 수 있게 할 것
+- WaveSpawner (MonoBehaviour):
+  - WaveData 리스트를 순서대로 진행
+  - 현재 웨이브의 적이 전부 죽으면 3초 후 다음 웨이브
+  - 스폰 위치는 SpawnPoints 오브젝트 하나를 [SerializeField]로 받아서
+    그 자식 Transform들을 Awake에서 모아 쓰고, 그중 랜덤으로 고를 것.
+    Transform 배열을 인스펙터에 노출하지 마
+  - 플레이어 Transform을 [SerializeField]로 받아서,
+    스폰한 적에게 2-3에서 만든 공개 메서드로 넘겨줄 것
+  - 웨이브 시작 / 웨이브 클리어 / 전체 클리어를 C# 이벤트로 노출
+  - 살아 있는 적 수는 스폰할 때 세고, 각 적의 사망 이벤트를 구독해서 줄일 것.
+    매 프레임 FindObjectsOfType 으로 세지 마
+
+파일 2개만: Assets/Scripts/Core/WaveData.cs, Assets/Scripts/Core/WaveSpawner.cs
+오브젝트 풀링은 아직 넣지 마. 다음 단계에서 할 거야.
+씬은 건드리지 말고 세팅 절차만 알려줘.
+```
+**결과**: 구현 성공 요청한데로 절차 설명까지 문제 없었음.
+**문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
+**배운 점**: 여러 단계를 거쳐가면서 직접 검증하는 부분이 있어 매우 확실하게 진행됨.
+```
+````
 ### 2-5. 오브젝트 풀링 리팩터링
 
 <!-- "밖에서 보면 아무것도 안 바뀌었는가" 에 대한 본인 판정 -->
