@@ -152,22 +152,55 @@ Raycast 기반 사격 시스템을 추가해줘.
 ````
 ### 1-4. 과제 — 대시 또는 조준
 ````markdown
-## <4> — <조준>
+## <4> — <대시>
 
 ### 시도 1
 ```
-(프롬프트 전문을 여기에 붙여넣기)
+대시(Dash)를 추가해줘.
+
+요구사항:
+- 입력은 InputSystem_Actions의 Player 맵에 있는 Sprint 액션을 쓸 것 (Shift).
+  새 InputAction을 코드로 만들지 말 것
+- PlayerController, WeaponSystem과 똑같이 [SerializeField] InputActionAsset 참조를 1개 받을 것
+- 에셋을 다른 컴포넌트와 공유하니까 맵 전체를 Enable/Disable하지 말고
+  Sprint 액션만 OnEnable/OnDisable에서 켜고 끌 것
+- Shift를 누르면 바라보는 방향으로 짧게 돌진
+  · 방향은 transform.forward의 수평(XZ) 성분. 이동 입력(WASD)과 무관하게 항상 정면으로
+  · 위나 아래를 보고 있어도 수직으로는 날아가지 않는다
+- 돌진 거리 / 돌진 시간 / 쿨다운은 인스펙터에서 조절 가능
+  기본값: 거리 6m, 시간 0.2초, 쿨다운 1.5초
+- 이동은 CharacterController.Move로 할 것 (벽을 뚫으면 안 된다)
+  · Awake에서 CharacterController를 캐싱
+- 돌진 중에는 재입력을 무시한다. 쿨다운은 돌진을 시작한 시점부터 센다
+- 공중에서도 대시 가능. 수직 속도는 건드리지 않는다 (중력은 PlayerController가 그대로 처리)
+- 대시 시작과 쿨다운 종료 시 콘솔에 출력 (검증용. 나중에 HUD로 옮길 것이다)
+  · Update 안에서 문자열 연결(+) 금지 → Debug.LogFormat 사용
+- 참조(에셋 / Player 맵 / Sprint 액션 / CharacterController)가 비어 있으면
+  LogError를 남기고 컴포넌트를 끌 것
+- PlayerController와 WeaponSystem은 수정하지 말고 별도 컴포넌트로
+
+파일: Assets/Scripts/Player/PlayerDash.cs 하나만 생성.
+
+PlayerDash 컴포넌트를 Player 에 붙이고,
+Input Actions 칸에 Assets/InputSystem_Actions.inputactions 를 연결해줘.
+
+끝나면 각 칸에 실제로 값이 들어갔는지 다시 읽어서 보여줘.
+
+□ Shift를 누르면 바라보는 방향으로 짧게 돌진한다
+□ 이동 키를 누르지 않고 Shift만 눌러도 정면으로 나간다
+□ 위나 아래를 보고 대시해도 공중으로 뜨거나 땅으로 꺼지지 않는다
+□ 거리가 대략 6m다 (표적 z=8 앞에서 시험)
+□ 벽에 붙어서 대시해도 벽을 뚫지 않는다
+□ 대시 중에 Shift를 다시 눌러도 연속 발동되지 않는다
+□ 쿨다운 1.5초 전에 Shift를 눌러도 대시하지 않는다
+□ 쿨다운이 끝나면 다시 대시된다 (콘솔 로그로 확인)
+□ 공중(점프 중)에서도 대시된다
+□ 대시 직후에도 이동, 시점, 점프, 사격이 정상이다
+□ 콘솔에 에러가 없다
 ```
 **결과**:
 **문제점**:
 **원인 분석**:
-
-### 시도 2
-```
-(수정한 프롬프트 전문)
-```
-**무엇을 바꿨나**:
-**결과**:
 **배운 점**:
 ````
 ---
