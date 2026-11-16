@@ -18,6 +18,8 @@ namespace ArenaBreak.Core
 
         private readonly List<Transform> _spawnPointList = new List<Transform>();
         private readonly List<Health> _waveEnemies = new List<Health>();
+        private readonly Dictionary<EnemyAI, List<EnemyAI>> _pools = new Dictionary<EnemyAI, List<EnemyAI>>();
+        private readonly Dictionary<EnemyAI, Health> _healthByEnemy = new Dictionary<EnemyAI, Health>();
         private int _aliveCount;
 
         public event Action<int, int> OnWaveStarted;
@@ -135,21 +137,62 @@ namespace ArenaBreak.Core
         {
             Transform point = _spawnPointList[UnityEngine.Random.Range(0, _spawnPointList.Count)];
 
-            // 풀링 대상: 웨이브마다 적이 계속 생성/파괴된다
-            EnemyAI enemy = Instantiate(prefab, point.position, point.rotation);
-            enemy.SetPlayer(_player);
-
-            // 사망 이벤트를 받을 수 없으면 웨이브가 영영 끝나지 않으므로 세지 않고 되돌린다
-            if (!enemy.TryGetComponent(out Health health))
+            EnemyAI enemy = GetEnemy(prefab, point.position, point.rotation);
+            if (enemy == null)
             {
-                Debug.LogError($"WaveSpawner: '{prefab.name}'에 Health가 없다.", this);
-                Destroy(enemy.gameObject);
                 return;
             }
 
+            enemy.SetPlayer(_player);
+
+            // 같은 웨이브 안에서 죽은 적이 비활성화된 뒤 다시 꺼내질 수 있다.
+            // 구독이 겹치면 한 번 죽을 때 두 번 세므로 먼저 해제하고 다시 구독한다
+            Health health = _healthByEnemy[enemy];
+            health.OnDied -= HandleEnemyDied;
             health.OnDied += HandleEnemyDied;
-            _waveEnemies.Add(health);
+
+            if (!_waveEnemies.Contains(health))
+            {
+                _waveEnemies.Add(health);
+            }
+
             _aliveCount++;
+        }
+
+        private EnemyAI GetEnemy(EnemyAI prefab, Vector3 position, Quaternion rotation)
+        {
+            if (!_pools.TryGetValue(prefab, out List<EnemyAI> pool))
+            {
+                pool = new List<EnemyAI>();
+                _pools.Add(prefab, pool);
+            }
+
+            // 죽은 적은 EnemyAI가 스스로 비활성화하므로 꺼져 있는 것이 풀에 돌아온 적이다
+            for (int i = 0; i < pool.Count; i++)
+            {
+                EnemyAI pooled = pool[i];
+                if (pooled != null && !pooled.gameObject.activeSelf)
+                {
+                    // 꺼진 상태에서 옮겨야 NavMeshAgent가 켜질 때 새 위치에 놓인다
+                    pooled.transform.SetPositionAndRotation(position, rotation);
+                    pooled.gameObject.SetActive(true);
+                    return pooled;
+                }
+            }
+
+            EnemyAI created = Instantiate(prefab, position, rotation);
+
+            // 사망 이벤트를 받을 수 없으면 웨이브가 영영 끝나지 않으므로 풀에 넣지 않고 되돌린다
+            if (!created.TryGetComponent(out Health health))
+            {
+                Debug.LogError($"WaveSpawner: '{prefab.name}'에 Health가 없다.", this);
+                Destroy(created.gameObject);
+                return null;
+            }
+
+            _healthByEnemy.Add(created, health);
+            pool.Add(created);
+            return created;
         }
 
         private void HandleEnemyDied()

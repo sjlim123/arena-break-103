@@ -17,9 +17,11 @@ namespace ArenaBreak.Core
         public event Action<int, int> OnHealthChanged;
         public event Action OnDied;
 
-        private void Awake()
+        private void OnEnable()
         {
+            // 풀에서 다시 꺼낼 때도 처음 상태로 돌아가야 하므로 Awake가 아니라 OnEnable에서 초기화한다
             _currentHealth = _maxHealth;
+            _isDead = false;
         }
 
         public void TakeDamage(int amount)

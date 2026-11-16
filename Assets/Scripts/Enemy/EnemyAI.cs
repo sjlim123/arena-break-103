@@ -1,12 +1,13 @@
 using ArenaBreak.Core;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization;
 
 namespace ArenaBreak.Enemy
 {
     public class EnemyAI : MonoBehaviour
     {
-        private enum State
+        protected enum State
         {
             Idle,
             Chase,
@@ -26,7 +27,8 @@ namespace ArenaBreak.Enemy
         [Min(0)] [SerializeField] private int _attackDamage = 10;
 
         [Header("Death")]
-        [Min(0f)] [SerializeField] private float _destroyDelay = 1f;
+        [FormerlySerializedAs("_destroyDelay")]
+        [Min(0f)] [SerializeField] private float _deactivateDelay = 1f;
 
         private NavMeshAgent _agent;
         private Health _health;
@@ -34,6 +36,11 @@ namespace ArenaBreak.Enemy
 
         private State _state = State.Idle;
         private float _nextAttackTime;
+        private float _deactivateTime;
+
+        // 상속한 AI가 필드를 직접 바꾸지 못하고 읽기만 하도록 프로퍼티로 노출한다
+        protected NavMeshAgent Agent => _agent;
+        protected Transform Player => _player;
 
         // 프리팹은 씬 오브젝트를 참조할 수 없어서, 스폰한 쪽이 Instantiate 직후에 플레이어를 넣어준다
         public void SetPlayer(Transform player)
@@ -59,12 +66,16 @@ namespace ArenaBreak.Enemy
             CachePlayerDamageable();
         }
 
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
             if (_health == null)
             {
                 return;
             }
+
+            // 풀에서 다시 꺼낼 때도 처음 상태로 시작해야 하므로 OnEnable에서 초기화한다
+            _state = State.Idle;
+            _nextAttackTime = 0f;
 
             _health.OnDied += HandleDied;
         }
@@ -102,6 +113,7 @@ namespace ArenaBreak.Enemy
                     UpdateAttack();
                     break;
                 case State.Dead:
+                    UpdateDead();
                     break;
             }
         }
@@ -119,7 +131,7 @@ namespace ArenaBreak.Enemy
             }
         }
 
-        private void UpdateChase()
+        protected virtual void UpdateChase()
         {
             if (_player == null)
             {
@@ -136,7 +148,7 @@ namespace ArenaBreak.Enemy
             _agent.SetDestination(_player.position);
         }
 
-        private void UpdateAttack()
+        protected virtual void UpdateAttack()
         {
             if (_player == null)
             {
@@ -169,13 +181,24 @@ namespace ArenaBreak.Enemy
             }
         }
 
+        private void UpdateDead()
+        {
+            if (Time.time < _deactivateTime)
+            {
+                return;
+            }
+
+            // 파괴하지 않고 꺼 두면 WaveSpawner의 풀이 비활성 상태를 보고 다시 꺼내 쓴다
+            gameObject.SetActive(false);
+        }
+
         private void HandleDied()
         {
             ChangeState(State.Dead);
-            Destroy(gameObject, _destroyDelay);
+            _deactivateTime = Time.time + _deactivateDelay;
         }
 
-        private void ChangeState(State next)
+        protected void ChangeState(State next)
         {
             _state = next;
 
@@ -183,7 +206,7 @@ namespace ArenaBreak.Enemy
             _agent.isStopped = next != State.Chase;
         }
 
-        private float GetDistanceToPlayer()
+        protected float GetDistanceToPlayer()
         {
             Vector3 toPlayer = _player.position - transform.position;
 
