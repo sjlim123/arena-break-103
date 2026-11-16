@@ -324,7 +324,7 @@ ScriptableObject 기반 웨이브 시스템을 만들어줘.
 오브젝트 풀링은 아직 넣지 마. 다음 단계에서 할 거야.
 씬은 건드리지 말고 세팅 절차만 알려줘.
 ```
-**결과**: 구현 성공 요청한데로 절차 설명까지 문제 없었음.
+**결과**: 구현 성공 요청한데로 절차 설명까지 문제 없었음. 웨이브 및 적들 생성 정상.
 **문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
 **배운 점**: 여러 단계를 거쳐가면서 직접 검증하는 부분이 있어 매우 확실하게 진행됨.
 ```
@@ -332,17 +332,131 @@ ScriptableObject 기반 웨이브 시스템을 만들어줘.
 ### 2-5. 오브젝트 풀링 리팩터링
 
 <!-- "밖에서 보면 아무것도 안 바뀌었는가" 에 대한 본인 판정 -->
+방금 만든 WaveSpawner에 오브젝트 풀링을 적용해줘.
 
+- Instantiate/Destroy 를 풀 재사용으로 바꿀 것
+- WaveSpawner 의 공개 API와 이벤트 시그니처는 그대로 유지
+- 적이 죽으면 파괴하지 말고 비활성화해서 풀로 돌려보낼 것
+- 풀에서 꺼낸 적은 체력과 상태가 초기화되어 있어야 한다
+- 변경 전후 차이를 요약해서 설명해줘
+```
+**결과**: 정상적으로 완료 + 규약을 지켜가며 검증 과정 또한 확인시켜줌.
+**문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
+**배운 점**: 규약을 지켜가며 클로드 스스로 직접 검증하는 부분이 있었고 어떤식으로 진행했는지 또한 설명하며 진행됨.
+```
 ### 2-6. 과제 — 원거리 적 또는 돌진 적
 
 ---
+원거리 적(RangedEnemy)을 추가해줘. 아래 순서대로, 단계마다 컴파일 에러를 확인하고 넘어가. 막히면 멈추고 알려줘.
+풀링도 그대로 동작해야 하니, RangedEnemyAI 는 EnemyAI 를 상속한다. 근접 적 동작은 달라지면 안 된다.
+프리팹 (MCP 도구로 직접)
+- Projectile: Sphere, Scale 0.3, Collider 제거(플레이어의 Ray 가 막히면 안 된다), Projectile 컴포넌트,
+  형광 초록 URP Lit 머티리얼 Projectile_Green → Assets/Prefabs/Projectile.prefab
+- RangedEnemy: Enemy.prefab 을 복제(원본 유지) → Assets/Prefabs/RangedEnemy.prefab
+  EnemyAI 제거 후 RangedEnemyAI 추가, NavMeshAgent Speed 3 / Stopping Distance 0, Health 20,
+  보라색 URP Lit 머티리얼 RangedEnemy_Purple, 투사체 칸에 Projectile.prefab, 플레이어 칸은 비움
+- 씬에 임시로 만든 오브젝트는 정리하고, 남은 게 있으면 알려줘
+
+마지막 임시 테스트
+- 씬의 기존 임시 Enemy 를 지우고, RangedEnemy 인스턴스를 (0,1,15) 에 놓고 플레이어 칸에 Player 연결
+**결과**: 정상적으로 완료
+**문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
+**배운 점**: 어떤식으로 진행했는지 또한 설명하며 진행됨.
 
 ## 3장
 
 ### 3-1. 게임 상태 머신
 
-### 3-2. HUD
+```
+게임 상태 머신을 만들어줘.
 
+- 상태: Ready / Playing / GameOver / Cleared — enum + switch로 단순하게
+- Ready에서 시작해 잠깐 뒤 Playing으로 (대기 시간은 인스펙터에서 조절)
+- 플레이어 Health의 사망 이벤트를 구독해서 GameOver로
+- WaveSpawner의 전체 클리어 이벤트를 구독해서 Cleared로
+- GameOver / Cleared 에서: 커서 표시, Time.timeScale = 0
+- 그 상태에서 R키를 누르면 현재 씬을 다시 로드
+  (Time.timeScale을 1로 되돌리는 것을 잊지 말 것)
+- 상태가 바뀌면 C# 이벤트로 알릴 것 — HUD가 구독할 것이다
+- 구독한 이벤트는 OnDisable에서 반드시 구독 해제할 것
+- GameOver / Cleared 로 갈 때 플레이어 조작을 멈출 것.
+  timeScale = 0 은 Update를 멈추지 않아서, 안 끄면 죽은 뒤에도 총이 나간다
+  PlayerController 와 WeaponSystem 을 각각 [SerializeField] 로 받아 enabled 를 끌 것.
+  배열이나 리스트 하나로 묶지 마 — 타입이 넓어지면 인스펙터에서 엉뚱한 것도 들어간다
+- Esc로 게임을 종료할 것 (Application.Quit). 어느 상태에서든 눌리게
+- R키와 Esc는 InputSystem_Actions 에셋에 액션이 없다.
+  WeaponSystem의 재장전처럼 코드에서 InputAction을 만들어 쓸 것
+
+파일: Assets/Scripts/Core/GameManager.cs 하나만 생성.
+WaveSpawner와 PlayerController는 수정하지 마.
+씬은 건드리지 말고 세팅 절차만 알려줘.
+```
+GameManager 컴포넌트를 씬의 GameManager 오브젝트에 붙여줘.
+(2장에 WaveSpawner를 붙인 그 오브젝트다)
+
+- 플레이어 Health 참조 칸에 씬의 Player 를 연결
+- WaveSpawner 참조 칸에 같은 오브젝트의 WaveSpawner 를 연결
+- PlayerController 칸과 WeaponSystem 칸에도 씬의 Player 를 연결
+
+끝나면 컴포넌트를 다시 읽어서 네 칸에 실제로 값이 들어갔는지 보여줘.
+None 인 칸이 하나라도 있으면 알려줘.
+
+Assets/Data 에 WaveData 에셋을 2개 더 만들어줘.
+
+- Wave_4 : 적 12마리, 스폰 간격 0.5초
+- Wave_5 : 적 16마리, 스폰 간격 0.4초
+- 둘 다 적 프리팹은 Assets/Prefabs/Enemy.prefab
+
+만든 뒤 GameManager 오브젝트의 WaveSpawner 웨이브 리스트 끝에 순서대로 추가해줘.
+끝나면 리스트를 다시 읽어서 5개가 들어갔는지 보여줘.
+```
+**결과**: 정상적으로 완료 씬세팅 작업 정상완료
+**문제점**: 사람이 직접 확인해야하는 작업 이외 없음.
+**배운 점**: 0으로 만드는 위치가 EnterEndState의 맨 끝인 이유
+1로 되돌리는 코드가 LoadScene보다 앞이어야 하는 이유 를 둘다 설명해줌.
+````
+### 3-2. HUD
+````
+HUD가 구독할 수 있도록 두 곳에 이벤트를 추가해줘.
+
+- WeaponSystem: 탄약이 변할 때 (현재, 최대) 를 알리는 이벤트.
+  기존 Debug.Log는 지울 것 — 이제 화면에 나온다
+- WaveSpawner: 적이 죽을 때마다 누적 킬 수를 알리는 이벤트.
+  이미 각 적의 사망 이벤트를 구독하고 있으니 거기서 세면 된다
+
+기존 기능과 공개 이벤트 시그니처는 그대로 유지할 것.
+파일 2개만 수정하고 다른 파일은 건드리지 마.
+````
+
+```
+git diff Assets/Scripts/Player/WeaponSystem.cs Assets/Scripts/Core/WaveSpawner.cs
+HUD를 만들어줘. UI Toolkit 말고 uGUI로.
+텍스트는 TextMeshPro 말고 레거시 UnityEngine.UI.Text 를 쓸 것.
+(TMP를 처음 쓰면 임포트 창이 떠서 그동안 MCP가 멈춘다)
+
+표시할 것:
+- 좌하단: 체력바. 어두운 배경 Image 안에 빨간 Image를 넣고,
+  그 빨간 Image의 RectTransform 앵커 폭으로 줄일 것.
+  Image.fillAmount는 쓰지 마 — 이유는 아래에 적었다.
+  Health의 HealthChanged 이벤트 구독
+- 우하단: 탄약 "현재 / 최대". WeaponSystem의 탄약 이벤트 구독
+- 상단 중앙: 웨이브 번호. WaveSpawner의 WaveStarted 이벤트 구독
+- 상단 우측: 킬 수. WaveSpawner의 킬 이벤트 구독
+- 화면 중앙: GameOver / Cleared 안내 문구와 "R키로 재시작".
+  평소에는 숨기고 GameManager의 상태 이벤트로 켤 것
+
+- Update()에서 폴링하지 말 것. 전부 이벤트 구독으로
+- 구독은 OnEnable, 구독 해제는 OnDisable
+- 참조는 전부 [SerializeField] 로 받을 것. Find 계열 금지
+
+파일: Assets/Scripts/UI/HUDController.cs 하나만 생성.
+UI 오브젝트는 아직 만들지 말고, 어떤 오브젝트가 필요한지 목록만 알려줘.
+
+```
+```
+**결과**: 정상적으로 작업완료
+**문제점**: 정상완료
+```
 ### 3-3. 게임필
 
 <!-- AI가 1번만 만들었는가, 3개를 다 만들었는가 -->

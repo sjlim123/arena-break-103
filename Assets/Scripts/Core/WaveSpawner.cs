@@ -21,10 +21,12 @@ namespace ArenaBreak.Core
         private readonly Dictionary<EnemyAI, List<EnemyAI>> _pools = new Dictionary<EnemyAI, List<EnemyAI>>();
         private readonly Dictionary<EnemyAI, Health> _healthByEnemy = new Dictionary<EnemyAI, Health>();
         private int _aliveCount;
+        private int _killCount;
 
         public event Action<int, int> OnWaveStarted;
         public event Action<int, int> OnWaveCleared;
         public event Action OnAllWavesCleared;
+        public event Action<int> OnKillCountChanged;
 
         private void Awake()
         {
@@ -198,6 +200,10 @@ namespace ArenaBreak.Core
         private void HandleEnemyDied()
         {
             _aliveCount--;
+
+            // 웨이브가 바뀌어도 이어서 세는 누적 킬 수다
+            _killCount++;
+            OnKillCountChanged?.Invoke(_killCount);
         }
 
         private void UnsubscribeAll()

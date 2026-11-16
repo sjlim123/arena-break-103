@@ -1,3 +1,4 @@
+using System;
 using ArenaBreak.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -43,6 +44,8 @@ namespace ArenaBreak.Player
         private bool _isReloading;
         private float _reloadEndTime;
 
+        public event Action<int, int> OnAmmoChanged;
+
         private void Awake()
         {
             _currentAmmo = _maxAmmo;
@@ -57,6 +60,12 @@ namespace ArenaBreak.Player
             // 에셋에 Reload 액션이 없어서 코드로 만든다
             _reloadAction = new InputAction(ReloadActionName, InputActionType.Button, ReloadBinding);
             _markerTemplate = CreateMarkerTemplate();
+        }
+
+        private void Start()
+        {
+            // HUD가 구독한 뒤에 첫 값을 받을 수 있도록 시작할 때 한 번 알린다
+            OnAmmoChanged?.Invoke(_currentAmmo, _maxAmmo);
         }
 
         private void OnEnable()
@@ -178,8 +187,7 @@ namespace ArenaBreak.Player
                 ApplyDamage(hit.collider);
             }
 
-            // 3장에서 HUD로 옮길 임시 출력. 문자열 연결을 피하려고 LogFormat을 쓴다
-            Debug.LogFormat("[WeaponSystem] 발사 - 남은 탄약 {0}/{1}", _currentAmmo, _maxAmmo);
+            OnAmmoChanged?.Invoke(_currentAmmo, _maxAmmo);
         }
 
         private void ApplyDamage(Collider target)
@@ -206,8 +214,6 @@ namespace ArenaBreak.Player
         {
             _isReloading = true;
             _reloadEndTime = Time.time + _reloadDuration;
-
-            Debug.LogFormat("[WeaponSystem] 재장전 시작 - 남은 탄약 {0}/{1}", _currentAmmo, _maxAmmo);
         }
 
         private void FinishReload()
@@ -215,7 +221,7 @@ namespace ArenaBreak.Player
             _isReloading = false;
             _currentAmmo = _maxAmmo;
 
-            Debug.LogFormat("[WeaponSystem] 재장전 완료 - 남은 탄약 {0}/{1}", _currentAmmo, _maxAmmo);
+            OnAmmoChanged?.Invoke(_currentAmmo, _maxAmmo);
         }
     }
 }
